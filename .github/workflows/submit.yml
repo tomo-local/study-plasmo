@@ -1,13 +1,13 @@
-name: Deploy to Chrome Web Store
+name: "Submit to Web Store"
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -34,10 +34,13 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Clear cache (optional)
+        run: rm -rf node_modules/.cache
 
       - name: Build the extension
-        run: pnpm run build
+        run: pnpm run build --verbose
 
       - name: Package the extension into a zip artifact
         run: pnpm run package
