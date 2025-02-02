@@ -1,18 +1,12 @@
 name: "Submit to Web Store"
-
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: Cache pnpm modules
         uses: actions/cache@v3
         with:
@@ -20,31 +14,22 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9.0.6
+          version: v9.0.6
           run_install: false
-
       - name: Use Node.js 20.x
         uses: actions/setup-node@v3.4.1
         with:
           node-version: 20.x
           cache: "pnpm"
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Clear cache (optional)
-        run: rm -rf node_modules/.cache
-
+        run: pnpm install
       - name: Build the extension
-        run: pnpm run build --verbose
-
+        run: pnpm build --zip
       - name: Package the extension into a zip artifact
-        run: pnpm run package
-
+        run: pnpm package
       - name: Browser Platform Publish
         uses: PlasmoHQ/bpp@v3
         with:
