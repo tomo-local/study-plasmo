@@ -1,30 +1,50 @@
-import SearchBar from "@components/SearchBar"
+import SearchBar from "~components/SearchBar"
+import ResultLine from "~components/ResultLine"
 import { useEffect, useRef, useState } from "react"
 
 import "~/globals.css"
 
-import ResultLine from "~components/ResultLine"
 
 const Popup = () => {
   const [tabs, setTabs] = useState([])
   const [history, setHistory] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(-1)
-  const listRef = useRef(null) // リスト要素への参照
-  const searchInputRef = useRef(null) // 検索バーへの参照
+  const listRef = useRef(null)
+  const searchInputRef = useRef(null)
 
   useEffect(() => {
-    handleTabSearch("", 10) // 初期表示時にタブを検索
+    handleTabSearch("", 5)
 
     if (searchInputRef.current) {
-      searchInputRef.current.focus() // 検索バーにフォーカスを当てる
+      searchInputRef.current.focus()
     }
   }, [])
 
   const handleTabSearch = async (query: string, count: number) => {
-    const allTabs = await chrome.tabs.query({
-      currentWindow: false
+    const allWindows = await chrome.windows.getAll({
+      windowTypes: ["normal"]
     })
+
+    const notFocusedWindowIds = allWindows.map((window) => window.id)
+
+    const currentWindows = await chrome.windows.getCurrent()
+
+    if (currentWindows) {
+      notFocusedWindowIds.unshift(currentWindows.id)
+    }
+
+    const allTabs = await Promise.all(
+      [...new Set(notFocusedWindowIds)].map((windowId) =>
+        chrome.tabs.query({ windowId })
+      )
+    ).then((results) => results.flat())
+
+    if (query === "") {
+      setTabs([...allTabs])
+      return
+    }
+
     const exactMatches = allTabs.filter((tab) =>
       tab.title.toLowerCase().includes(query.toLowerCase())
     )
@@ -58,12 +78,35 @@ const Popup = () => {
             text: q,
             startTime: new Date().setDate(new Date().getDate() - 30),
             endTime: new Date().getTime(),
-            maxResults: 50
+            maxResults: 20
           },
-          (results) => setHistory((prev) => [...prev, ...results])
+          (results) => {
+            setHistory((prev) => [
+              ...prev,
+              ...uniqueObjects(results).filter(
+                (result) => !prev.some((item) => item.url === result.url)
+              )
+            ])
+          }
         )
       )
     )
+  }
+
+  function uniqueObjects(arr: { title: string; url: string }[]) {
+    const seen = new Set()
+    const result = []
+
+    for (const obj of arr) {
+      const key = obj.title || obj.url // titleまたはurlをキーとして使用
+
+      if (!seen.has(key)) {
+        seen.add(key)
+        result.push(obj)
+      }
+    }
+
+    return result
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,6 +121,7 @@ const Popup = () => {
       const item = combinedResults[selectedIndex]
       if (item.type === "tab") {
         chrome.tabs.update(item.id, { active: true })
+        window.close()
       } else {
         window.open(item.url, "_blank")
       }
@@ -126,7 +170,9 @@ const Popup = () => {
         />
       </div>
       <div className="mt-4 bg-gray-800 rounded">
-        <ul ref={listRef} className="overflow-y-scroll max-h-[400px]">
+        <ul
+          ref={listRef}
+          className="overflow-y-scroll max-h-[400px] hidden-scrollbar">
           {combinedResults.map((item, index) => (
             <ResultLine
               key={item.id}
@@ -134,6 +180,14 @@ const Popup = () => {
               index={index}
               selectedIndex={selectedIndex}
               onMouseEnter={handleMouseEnter}
+              onClick={() => {
+                if (item.type === "tab") {
+                  chrome.tabs.update(item.id, { active: true })
+                  window.close()
+                } else {
+                  window.open(item.url, "_blank")
+                }
+              }}
             />
           ))}
         </ul>

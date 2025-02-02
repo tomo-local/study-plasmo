@@ -1,19 +1,20 @@
 import ArrowLongRightIcon from "@heroicons/react/16/solid/ArrowLongRightIcon"
 
-function ResultLine({ key, item, index, selectedIndex, onMouseEnter }) {
+function ResultLine({
+  key,
+  item,
+  index,
+  selectedIndex,
+  onMouseEnter,
+  onClick
+}) {
   return (
     <li key={key}>
       <button
         key={item.id}
         className={`${selectedIndex === index && "bg-gray-700"} border-gray-700 rounded-lg flex w-full space-x-3 space-y-1 p-3 text-left hover:bg-gray-700`}
         onMouseEnter={() => onMouseEnter(index)}
-        onClick={() => {
-          if (item.type === "tab") {
-            chrome.tabs.update(item.id, { active: true })
-          } else {
-            window.open(item.url, "_blank")
-          }
-        }}>
+        onClick={onClick}>
         <div className="flex items-center justify-center flex-none h-full justify-items-center">
           {item.type === "tab" &&
             item.favIconUrl && ( // アイコンを表示
@@ -27,14 +28,10 @@ function ResultLine({ key, item, index, selectedIndex, onMouseEnter }) {
             />
           )}
         </div>
-        <div className="text-left truncate grow text-nowrap">
-          {item.title}
-        </div>
+        <div className="text-left truncate grow text-nowrap">{item.title}</div>
         {item.type === "tab" && (
           <div className="flex items-center justify-between flex-none w-28">
-            <div className="text-left truncate text-nowrap">
-              Switch to Tab
-            </div>
+            <div className="text-left truncate text-nowrap">Switch to Tab</div>
             <span>
               <div className="flex items-center justify-center p-1 bg-gray-900 rounded-lg">
                 <ArrowLongRightIcon className="size-4" />
